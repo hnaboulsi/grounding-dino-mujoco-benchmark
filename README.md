@@ -2,6 +2,8 @@
 
 Controlled MuJoCo experiment that renders ground truth and measures Grounding DINO couch detections with IoU, precision, and recall-oriented counts.
 
+![Annotated Grounding DINO detection](media/dino-annotated.png)
+
 ## Why I Built It
 
 A detector screenshot is not a benchmark. I wanted a small perception experiment where the scene, camera, segmentation mask, target box, model revision, and matching policy are all recorded and reproducible.
@@ -31,7 +33,7 @@ Grounding DINO, MuJoCo, PyTorch, and the couch mesh are dependencies. The reposi
 
 ## Results
 
-The evaluator tests pass locally and in GitHub Actions. A reference run writes `output/rgb.png`, `output/target_mask.png`, and `output/result.json`; those generated artifacts remain ignored until a specific machine/model run is deliberately committed. The current experiment is one target in one controlled scene, not a claim about detector performance in unconstrained robot perception.
+The fresh CPU run produced one couch detection at score `0.833` with IoU `0.993`, yielding TP=1, FP=0, and FN=0. The evaluator tests also pass locally and in GitHub Actions. The run writes `output/rgb.png`, `output/target_mask.png`, and `output/result.json`; the annotated evidence image above is the deliberately committed reference artifact. This is one target in one controlled scene, not a claim about detector performance in unconstrained robot perception.
 
 ## Tech Stack
 
