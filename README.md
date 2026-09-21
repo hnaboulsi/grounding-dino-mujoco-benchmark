@@ -1,33 +1,43 @@
 # Grounding DINO MuJoCo Benchmark
 
-This repository runs one transparent controlled experiment: a primitive MuJoCo room contains a separately loaded CC0 couch model, MuJoCo renders RGB plus an object-segmentation ground truth, Grounding DINO predicts a couch box, and the evaluator writes IoU, TP, FP, and FN to JSON.
+Controlled MuJoCo experiment that renders ground truth and measures Grounding DINO couch detections with IoU, precision, and recall-oriented counts.
 
-## Demo / Results
+## Why I Built It
 
-Running the benchmark produces `output/rgb.png`, `output/target_mask.png`, and
-`output/result.json`. The JSON records the complete scene configuration, model revision,
-detections, ground-truth box, and final match decision so a screenshot cannot substitute for a
-reproducible result. Generated results are machine-specific and remain ignored until a verified
-reference run is deliberately committed.
+A detector screenshot is not a benchmark. I wanted a small perception experiment where the scene, camera, segmentation mask, target box, model revision, and matching policy are all recorded and reproducible.
 
-## What I Built
+## What It Does
 
-The repository owns the MuJoCo scene construction, camera configuration, segmentation-to-box
-ground truth, Grounding DINO adapter, and score-ordered IoU evaluator. Grounding DINO, MuJoCo,
-and the CC0 couch mesh are dependencies rather than original work; the asset's source and terms
-are recorded in [`assets/CC0-LICENSE.txt`](assets/CC0-LICENSE.txt).
+The project builds a primitive MuJoCo room, loads a separately licensed CC0 couch mesh, renders RGB and object segmentation, runs Grounding DINO with a text prompt, and writes the detections and evaluation decision to JSON.
 
-## How It Works
+## Key Engineering Work
 
-The execution path is intentionally short:
+- Built the controlled MuJoCo scene and camera configuration.
+- Converted segmentation output into an independently computed ground-truth box.
+- Kept model inference behind a small detector adapter.
+- Implemented score-ordered matching at a configurable IoU threshold.
+- Recorded scene parameters, detections, model revision, and final counts in JSON.
+- Added evaluator tests and CI for the lightweight logic.
+
+## Architecture
 
 ```text
 scene.py → render.py → detector.py → evaluate.py → run.py
+     │          │            │             │
+  scene      RGB + mask   DINO boxes   IoU / TP / FP / FN
 ```
 
-## Running It
+Grounding DINO, MuJoCo, PyTorch, and the couch mesh are dependencies. The repository owns the scene construction, ground-truth extraction, adapter boundary, and evaluation policy. Asset attribution is in [`assets/CC0-LICENSE.txt`](assets/CC0-LICENSE.txt).
 
-Install the headless rendering libraries on Ubuntu:
+## Results
+
+The evaluator tests pass locally and in GitHub Actions. A reference run writes `output/rgb.png`, `output/target_mask.png`, and `output/result.json`; those generated artifacts remain ignored until a specific machine/model run is deliberately committed. The current experiment is one target in one controlled scene, not a claim about detector performance in unconstrained robot perception.
+
+## Tech Stack
+
+Python, MuJoCo, Grounding DINO through Hugging Face Transformers, PyTorch, NumPy, Pillow, pytest, and GitHub Actions.
+
+## Running Locally
 
 ```bash
 sudo apt-get update
@@ -37,41 +47,10 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements.txt
-```
-
-Run the experiment:
-
-```bash
+python -m pytest -q
 MUJOCO_GL=osmesa python run.py
 ```
 
-The first detector run downloads the pinned Grounding DINO Tiny model from Hugging Face. The model is CPU-first; to use CUDA, change `DEVICE = "cpu"` to `DEVICE = "cuda"` in `run.py`.
+The first detector run downloads the pinned Grounding DINO Tiny model from Hugging Face. Set `DEVICE = "cuda"` in `run.py` only when the host has a compatible CUDA setup.
 
-## Results Schema
-
-`output/rgb.png` is the rendered camera image. `output/target_mask.png` is the binary segmentation mask for the couch geom. `output/result.json` contains the scene values, visible-pixel ground truth box, every Grounding DINO detection above confidence `0.35`, model revision, and the final evaluation at IoU `0.50`.
-
-## Experiment Controls
-
-Edit the `SCENE` value in `scene.py`. The fields are deliberately visible in one place:
-
-- `camera_position` and `camera_look_at` control the view.
-- `fx`, `fy`, `cx`, and `cy` control the camera intrinsics.
-- `couch_position` and `couch_yaw_deg` control target placement.
-- `lighting` accepts `normal`, `dim`, or `bright`.
-- `prompt` is the Grounding DINO text prompt.
-
-The room shell is built in `build_xml` from floor and wall primitives. The couch remains an independent MuJoCo body named `target`, so segmentation can identify it directly. The OBJ scale, mesh rotation, color, and floor offset are the constants immediately below `SCENE`.
-
-`evaluate.py` contains the only matching policy: score-ordered detections, one target match at IoU `0.50`, and duplicate or unmatched predictions counted as false positives. Change those constants only if the experiment question requires a different operating point.
-
-The asset is CC0. Its source attribution and license are in `assets/CC0-LICENSE.txt`.
-
-## Tech
-
-Python, MuJoCo, Grounding DINO through Hugging Face Transformers, PyTorch, NumPy, Pillow, and
-pytest.
-
-## License
-
-Code is MIT-licensed. The couch asset is separately provided under CC0.
+MIT License for the code. The couch asset is provided separately under CC0.
